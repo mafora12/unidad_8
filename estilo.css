@@ -8,6 +8,7 @@
   --mimi: #FDD5DF;
   --peachy: #FCE4EC;
   --lavender: #FAE8ED;
+  --morado: #9C27B0;
   --vidrio: rgba(255, 255, 255, 0.55);
 }
 
@@ -134,6 +135,14 @@ footer {
 #acciones .principal:hover { background: var(--deep-rose); }
 #acciones .principal:disabled { background: var(--blush); }
 .suave { opacity: 0.7; }
+
+/* en el Cierre, Prompt se identifica en morado */
+#pista b.morado { color: var(--morado); }
+body[data-modo="3"] #tarjeta-prompt h2 { color: var(--morado); }
+body[data-modo="3"] #tarjeta-prompt .seg.decisiones,
+body[data-modo="3"] #tarjeta-prompt .punto.decisiones { background: repeating-linear-gradient(45deg, var(--morado) 0 4px, #CE93D8 4px 8px); }
+body[data-modo="3"] #tarjeta-prompt .seg.libre,
+body[data-modo="3"] #tarjeta-prompt .punto.libre { background: #E1BEE7; }
 
 /* Generar y Descartar solo existen en Prompt */
 body:not([data-modo="2"]) [data-accion=generar],

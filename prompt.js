@@ -14,6 +14,14 @@ const COLOR_ACCION = {
   combinar: PALETA.blush,
   descartar: PALETA.amaranth,
 };
+// en el Cierre, todo lo de Prompt se tiñe de morado para distinguirlo dentro de la misma piedra
+const MORADO = '#9C27B0';
+const COLOR_ACCION_MORADO = {
+  generar: '#9C27B0',
+  elegir: '#6A1B9A',
+  combinar: '#BA68C8',
+  descartar: '#CE93D8',
+};
 // color plano por variante: sin capas, sin historia
 const COLORES_VARIANTE = [PALETA.amaranth, PALETA.cherry, PALETA.blush, PALETA.pink];
 
@@ -27,6 +35,8 @@ class Prompt {
   reiniciar() {
     for (const v of this.variantes) freeGeometry(v.malla);
     if (this.actual && !this.variantes.includes(this.actual)) freeGeometry(this.actual.malla);
+    if (this.morada) freeGeometry(this.morada.malla);
+    this.morada = null; // versión morada de la forma actual, para el Cierre
     this.eParticula = E_TOTAL / N_PROMPT;
     this.libres = [];
     for (let i = 0; i < N_PROMPT; i++) {
@@ -52,7 +62,7 @@ class Prompt {
     const n = COSTO_DECISION / this.eParticula;
     for (let k = 0; k < n; k++) {
       const p = this.libres.pop();
-      this.boids.push(new Boid3(p.pos, COLOR_ACCION[accion]));
+      this.boids.push(new Boid3(p.pos, accion));
     }
     this.decisiones++;
     return true;
@@ -179,8 +189,27 @@ class Prompt {
       });
     }
 
+    this.dibujarEnergia(false);
+  }
+
+  // Cierre: la forma y el enjambre en morado, sobre la piedra de Construir (sin piedra propia)
+  dibujarFusion() {
+    if (this.actual && (!this.morada || this.morada.de !== this.actual)) {
+      if (this.morada) freeGeometry(this.morada.malla);
+      const col = rgbNorm(MORADO);
+      // un poco más pequeñas que las de Construir para que no parpadeen donde coinciden
+      const malla = mallaEsferas(this.actual.celdas.map(c => ({ ...mundo(c.x, c.h, c.z), r: S * 0.55, c: col })));
+      this.morada = { de: this.actual, malla };
+    }
+    noStroke();
+    fill('#E1BEE7');
+    if (this.actual) model(this.morada.malla);
+    this.dibujarEnergia(true);
+  }
+
+  dibujarEnergia(morado) {
     // energía libre
-    stroke(PALETA.dusty);
+    stroke(morado ? '#BA68C8' : PALETA.dusty);
     strokeWeight(2.5);
     beginShape(POINTS);
     for (const p of this.libres) vertex(p.pos.x, p.pos.y, p.pos.z);
@@ -194,7 +223,7 @@ class Prompt {
       translate(b.pos.x, b.pos.y, b.pos.z);
       rotateY(Math.atan2(-v.z, v.x));
       rotateZ(Math.atan2(v.y, Math.hypot(v.x, v.z)));
-      fill(b.col);
+      fill(morado ? b.colMorado : b.col);
       ellipsoid(7, 2.2, 3.5, 8, 5);
       pop();
     }
@@ -217,11 +246,12 @@ class Prompt {
 
 // Flocking 3D: separación, alineación, cohesión (+ no alejarse de la piedra)
 class Boid3 {
-  constructor(pos, hex) {
+  constructor(pos, accion) {
     this.pos = pos.copy();
     this.vel = p5.Vector.random3D().mult(2);
     this.acc = createVector();
-    this.col = color(hex);
+    this.col = color(COLOR_ACCION[accion]);
+    this.colMorado = color(COLOR_ACCION_MORADO[accion]);
   }
 
   flock(boids) {

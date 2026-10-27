@@ -32,9 +32,10 @@ function draw() {
     piezaPrompt.actualizar();
     piezaPrompt.dibujar(true);
   } else {
+    // las dos piezas en una sola piedra: Construir en sus rosas, Prompt en morado
     piezaPrompt.actualizar();
-    push(); translate(-300, 0, 0); scale(0.85); piezaConstruir.dibujar(); pop();
-    push(); translate(300, 0, 0); scale(0.85); piezaPrompt.dibujar(false); pop();
+    piezaConstruir.dibujar();
+    piezaPrompt.dibujarFusion();
   }
 
   if (frameCount % 6 === 0) actualizarUI();
@@ -59,7 +60,7 @@ function cambiarModo(m) {
 // en pantallas angostas (celular) la cámara se aleja para que quepa la piedra
 function ponerCamara() {
   const k = Math.max(1, 0.9 / (width / height));
-  const [ey, ez, cy] = modo === 3 ? [-330, 900, -120] : [-300, 680, -150];
+  const [ey, ez, cy] = [-300, 680, -150];
   cam.camera(0, cy + (ey - cy) * k, ez * k, 0, cy, 0, 0, 1, 0);
 }
 
@@ -144,7 +145,7 @@ function windowResized() {
 const PISTAS = {
   1: 'Arrastra para girar · rueda para acercar · <b>click en la piedra</b> para sembrar. La forma crece a su ritmo: no se puede acelerar.',
   2: '<b>Generar</b> trae 4 variantes al instante · <b>click</b> en una para elegirla · <b>shift + click</b> para combinarla con la actual.',
-  3: 'No cuál costó más, sino <b>dónde quedó el esfuerzo</b>.',
+  3: 'Las dos piezas en una sola piedra: <b>Construir</b> en rosa, <b class="morado">Prompt</b> en morado. No cuál costó más, sino <b>dónde quedó el esfuerzo</b>.',
 };
 
 function conectarUI() {
