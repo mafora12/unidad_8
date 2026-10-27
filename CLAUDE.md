@@ -19,8 +19,12 @@ Sistema de partículas con energía conservada. Contador visible de energía tot
 Referencias: meandros de Harold Fisk, flocking (3 reglas), musgo en las grietas del tōrō, frase de Luca (lo que no costó esfuerzo es difícil de valorar).
 
 ## Técnica
-- p5.js. Candidatas: partículas con fuerzas, trails/acumulación, DLA (Construir), flocking (capa de decisiones).
-- Primero prototipo mínimo (energía conservada + dos modos). Estética después.
+- p5.js 1.9.4 en modo WEBGL (3D). Paleta rosa de Mariana (deep rose #C2185B → lavender blush #FAE8ED), tipografías Italiana + Inter.
+- Construir: DLA 3D sobre una piedra (grilla 90×90×72); las partículas caen y, si tocan piedra desnuda, vuelven a subir. Color por orden de llegada (sedimento) y cauces congelados del camino de cada partícula. Click en la piedra = semilla. ~4 min, sin acelerar.
+- Prompt: variantes 3D instantáneas que orbitan la piedra; click elige, shift+click combina. Cada decisión (50 de energía) se vuelve pétalos de un flocking 3D.
+- Cierre: ambas piedras lado a lado. Contador de energía en tarjetas HTML (total = suma de partes).
+- Archivos: `util3d.js` (paleta, grilla, mallas horneadas en una sola geometría), `construir.js`, `prompt.js`, `sketch.js` (cámara, click en 3D, UI), `estilo.css`.
+- Deploy: GitHub Pages con Actions (`.github/workflows/pages.yml`) → https://mafora12.github.io/unidad_8/
 
 ## Forma de trabajo
 - Respuestas directas y concisas, en español. Editar archivos directamente.

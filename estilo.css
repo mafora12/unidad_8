@@ -1,0 +1,152 @@
+:root {
+  --deep-rose: #C2185B;
+  --dusty: #E91E63;
+  --blush: #F48FB1;
+  --amaranth: #FFA2B9;
+  --cherry: #FFB2C5;
+  --pastel: #F8BBD0;
+  --mimi: #FDD5DF;
+  --peachy: #FCE4EC;
+  --lavender: #FAE8ED;
+  --vidrio: rgba(255, 255, 255, 0.55);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--deep-rose);
+  background: radial-gradient(ellipse at 50% 30%, #fff 0%, var(--lavender) 35%, var(--mimi) 70%, var(--pastel) 100%);
+}
+
+#lienzo { position: fixed; inset: 0; }
+#lienzo canvas { display: block; cursor: grab; }
+#lienzo canvas:active { cursor: grabbing; }
+
+/* la interfaz no bloquea el lienzo, salvo sus controles */
+#ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  padding: 28px 32px;
+}
+#ui button, .tarjeta { pointer-events: auto; }
+
+header { position: absolute; top: 28px; left: 32px; max-width: 360px; }
+h1 {
+  font-family: 'Italiana', serif;
+  font-weight: 400;
+  font-size: clamp(28px, 3.2vw, 44px);
+  line-height: 1.05;
+  margin: 0;
+  color: var(--deep-rose);
+}
+h1 em { font-style: normal; color: var(--dusty); }
+.sub { margin: 10px 0 0; font-size: 13px; opacity: 0.75; }
+
+#modos {
+  position: absolute;
+  top: 28px;
+  right: 32px;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  background: var(--vidrio);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 24px rgba(194, 24, 91, 0.12);
+}
+
+button {
+  font: 500 14px 'Inter', sans-serif;
+  color: var(--deep-rose);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+}
+button:hover { background: var(--peachy); }
+button:active { transform: scale(0.97); }
+button:disabled { opacity: 0.35; cursor: default; background: transparent; }
+button span { opacity: 0.5; margin-right: 4px; font-size: 12px; }
+button.activo { background: var(--dusty); color: #fff; }
+button.activo span { opacity: 0.8; }
+
+#energia {
+  position: absolute;
+  left: 32px;
+  bottom: 28px;
+  display: flex;
+  gap: 14px;
+}
+.tarjeta {
+  width: 250px;
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: var(--vidrio);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(194, 24, 91, 0.12);
+}
+.tarjeta[hidden] { display: none; }
+.tarjeta h2 {
+  margin: 0;
+  font: 400 22px 'Italiana', serif;
+  color: var(--dusty);
+}
+.cifra { margin: 4px 0 10px; display: flex; align-items: baseline; gap: 8px; }
+.cifra .total { font: 600 34px 'Inter', sans-serif; letter-spacing: -0.02em; }
+.cifra small { font-size: 12px; opacity: 0.7; }
+
+.barra {
+  display: flex;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--peachy);
+}
+.seg { display: block; height: 100%; transition: width 0.4s ease; }
+.seg.forma, .punto.forma { background: var(--deep-rose); }
+.seg.libre, .punto.libre { background: var(--blush); }
+.seg.decisiones, .punto.decisiones { background: repeating-linear-gradient(45deg, var(--dusty) 0 4px, var(--amaranth) 4px 8px); }
+
+.tarjeta ul { list-style: none; margin: 12px 0 0; padding: 0; font-size: 13px; }
+.tarjeta li { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.tarjeta li span { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600; }
+.punto { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.extra { margin: 10px 0 0; font-size: 12px; opacity: 0.75; }
+
+footer {
+  position: absolute;
+  right: 32px;
+  bottom: 28px;
+  max-width: 420px;
+  text-align: right;
+}
+#pista { margin: 0 0 12px; font-size: 13px; line-height: 1.5; }
+#pista b { font-weight: 600; color: var(--dusty); }
+#acciones { display: inline-flex; gap: 6px; padding: 6px; border-radius: 999px; background: var(--vidrio); backdrop-filter: blur(10px); }
+#acciones .principal { background: var(--dusty); color: #fff; }
+#acciones .principal:hover { background: var(--deep-rose); }
+#acciones .principal:disabled { background: var(--blush); }
+.suave { opacity: 0.7; }
+
+/* Generar y Descartar solo existen en Prompt */
+body:not([data-modo="2"]) [data-accion=generar],
+body:not([data-modo="2"]) [data-accion=descartar] { display: none; }
+body[data-modo="3"] #acciones { display: none; }
+
+@media (max-width: 760px) {
+  #ui { padding: 16px; }
+  header { top: 16px; left: 16px; right: 16px; }
+  .sub { display: none; }
+  #modos { top: auto; bottom: 16px; right: 16px; left: 16px; justify-content: center; }
+  #energia { left: 16px; right: 16px; bottom: 80px; }
+  .tarjeta { width: auto; flex: 1; padding: 12px 14px; }
+  .tarjeta ul { display: none; }
+  footer { left: 16px; right: 16px; bottom: auto; top: 110px; max-width: none; text-align: left; }
+}

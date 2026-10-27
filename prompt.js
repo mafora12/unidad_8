@@ -1,122 +1,152 @@
 // Pieza Prompt: las formas aparecen al instante, pero cada decisión (generar, elegir,
 // combinar, descartar) convierte energía libre en energía de decisión.
-// La capa de decisiones es un flocking: cada boid es energía gastada decidiendo.
+// La capa de decisiones es un enjambre (flocking 3D): cada boid es energía gastada decidiendo.
 
 const N_PROMPT = 200;        // partículas de energía libre
 const COSTO_DECISION = 50;   // energía que mueve cada decisión (≈40 decisiones en total)
 const CELDAS_FORMA = 2000;   // las variantes tienen el mismo tamaño que la forma construida
-const THUMB = 135, THUMB_GAP = 10, THUMB_Y = 10;
+const ESCALA_VARIANTE = 0.3;
+const CENTRO_ENJAMBRE = { x: 0, y: -170, z: 0 };
 
 const COLOR_ACCION = {
-  generar: [230, 150, 70],
-  elegir: [240, 210, 90],
-  combinar: [220, 110, 160],
-  descartar: [200, 70, 60],
+  generar: PALETA.dusty,
+  elegir: PALETA.deepRose,
+  combinar: PALETA.blush,
+  descartar: PALETA.amaranth,
 };
+// color plano por variante: sin capas, sin historia
+const COLORES_VARIANTE = [PALETA.amaranth, PALETA.cherry, PALETA.blush, PALETA.pink];
 
 class Prompt {
-  constructor(w, h) {
-    this.w = w;
-    this.h = h;
-    this.cols = floor(w / CELDA);
-    this.rows = floor(h / CELDA);
-    this.pg = createGraphics(w, h);
-    this.pg.pixelDensity(1);
+  constructor() {
+    this.variantes = [];
+    this.actual = null;
     this.reiniciar();
   }
 
   reiniciar() {
+    for (const v of this.variantes) freeGeometry(v.malla);
+    if (this.actual && !this.variantes.includes(this.actual)) freeGeometry(this.actual.malla);
     this.eParticula = E_TOTAL / N_PROMPT;
     this.libres = [];
     for (let i = 0; i < N_PROMPT; i++) {
-      this.libres.push({ pos: createVector(random(this.w), random(this.h)), vel: p5.Vector.random2D() });
+      const a = random(TWO_PI), r = 170 * sqrt(random());
+      this.libres.push({
+        pos: createVector(r * cos(a), random(-300, -20), r * sin(a)),
+        vel: p5.Vector.random3D().mult(0.6),
+      });
     }
     this.boids = [];
     this.variantes = [];
     this.actual = null;
+    this.decisiones = 0;
+  }
+
+  sinEnergia() {
+    return this.libres.length * this.eParticula < COSTO_DECISION;
   }
 
   // mueve COSTO_DECISION de libre a decisiones; false si ya no alcanza
   gastar(accion) {
+    if (this.sinEnergia()) return false;
     const n = COSTO_DECISION / this.eParticula;
-    if (this.libres.length < n) return false;
     for (let k = 0; k < n; k++) {
       const p = this.libres.pop();
-      this.boids.push(new Boid(p.pos.x, p.pos.y, COLOR_ACCION[accion]));
+      this.boids.push(new Boid3(p.pos, COLOR_ACCION[accion]));
     }
+    this.decisiones++;
     return true;
+  }
+
+  // libera la malla de una forma que ya no se ve en ningún lado
+  soltar(v) {
+    if (v && v !== this.actual && !this.variantes.includes(v)) freeGeometry(v.malla);
   }
 
   generar() {
     if (!this.gastar('generar')) return;
+    const viejas = this.variantes;
     this.variantes = [0, 1, 2, 3].map(() => this.generarForma());
+    viejas.forEach(v => this.soltar(v));
   }
 
   elegir(i) {
     if (!this.variantes[i] || !this.gastar('elegir')) return;
+    const antes = this.actual;
     this.actual = this.variantes[i];
+    this.soltar(antes);
   }
 
   combinar(i) {
     if (!this.actual || !this.variantes[i] || !this.gastar('combinar')) return;
-    const mitad = this.cols / 2;
-    this.actual = this.actual.filter(c => c.x < mitad).concat(this.variantes[i].filter(c => c.x >= mitad));
+    const antes = this.actual;
+    const mitad = GX / 2;
+    const celdas = antes.celdas.filter(c => c.x < mitad).concat(this.variantes[i].celdas.filter(c => c.x >= mitad));
+    this.actual = { celdas, malla: this.malla(celdas) };
+    this.soltar(antes);
   }
 
   descartar() {
     if (!this.actual || !this.gastar('descartar')) return;
+    const antes = this.actual;
     this.actual = null;
+    this.soltar(antes);
   }
 
-  clickEn(mx, my, shift) {
-    for (let i = 0; i < 4; i++) {
-      const tx = this.thumbX(i);
-      if (mx >= tx && mx < tx + THUMB && my >= THUMB_Y && my < THUMB_Y + THUMB) {
-        if (shift) this.combinar(i);
-        else this.elegir(i);
-      }
-    }
+  malla(celdas) {
+    return mallaEsferas(celdas.map(c => ({ ...mundo(c.x, c.h, c.z), r: S * 0.62, c: c.c })));
   }
 
-  thumbX(i) {
-    return (this.w - (4 * THUMB + 3 * THUMB_GAP)) / 2 + i * (THUMB + THUMB_GAP);
-  }
-
-  // crecimiento instantáneo: ramas que salen de puntos recientes, sin historia
+  // crecimiento instantáneo: ramas que suben desde puntos recientes, sin historia
   generarForma() {
     const ocupadas = new Set();
     const celdas = [];
-    const agregar = (x, y) => { ocupadas.add(y * this.cols + x); celdas.push({ x, y }); };
-    const vecinos = (x, y) => {
+    const col = rgbNorm(random(COLORES_VARIANTE));
+    const sesgo = random(0.12, 0.45);  // qué tan largas son las ramas
+    const subir = random(0.3, 0.7);    // qué tan alta es la forma
+    const agregar = (x, h, z) => { ocupadas.add(indice(x, h, z)); celdas.push({ x, h, z, c: col }); };
+    const vecinos = (x, h, z) => {
       let n = 0;
-      for (let dy = -1; dy <= 1; dy++)
-        for (let dx = -1; dx <= 1; dx++)
-          if ((dx || dy) && ocupadas.has((y + dy) * this.cols + (x + dx))) n++;
+      for (let dh = -1; dh <= 1; dh++)
+        for (let dz = -1; dz <= 1; dz++)
+          for (let dx = -1; dx <= 1; dx++)
+            if ((dx || dh || dz) && ocupadas.has(indice(x + dx, h + dh, z + dz))) n++;
       return n;
     };
-    agregar(floor(this.cols / 2), floor(this.rows / 2));
-    let intentos = 0;
-    while (celdas.length < CELDAS_FORMA && intentos < CELDAS_FORMA * 50) {
-      intentos++;
-      const p = celdas[floor(celdas.length * pow(random(), 0.25))];
-      const x = p.x + floor(random(3)) - 1;
-      const y = p.y + floor(random(3)) - 1;
-      if (x < 0 || y < 0 || x >= this.cols || y >= this.rows) continue;
-      if (ocupadas.has(y * this.cols + x) || vecinos(x, y) > 2) continue;
-      agregar(x, y);
+
+    const bases = floor(random(1, 5));
+    for (let b = 0; b < bases; b++) {
+      agregar(floor(GX / 2 + random(-14, 14)), 0, floor(GZ / 2 + random(-14, 14)));
     }
-    return celdas;
+    let intentos = 0;
+    while (celdas.length < CELDAS_FORMA && intentos++ < CELDAS_FORMA * 40) {
+      const p = celdas[floor(celdas.length * pow(random(), sesgo))];
+      const x = p.x + floor(random(3)) - 1;
+      const z = p.z + floor(random(3)) - 1;
+      const h = p.h + (random() < subir ? 1 : random() < 0.2 ? -1 : 0);
+      if (h < 0 || h >= GH || !dentro(x, z)) continue;
+      if (ocupadas.has(indice(x, h, z)) || vecinos(x, h, z) > 2) continue;
+      agregar(x, h, z);
+    }
+    return { celdas, malla: this.malla(celdas) };
+  }
+
+  // las variantes orbitan despacio alrededor de la piedra (coordenadas de mundo)
+  posVariante(i) {
+    const a = i * HALF_PI + frameCount * 0.0025;
+    return { x: 300 * cos(a), y: -250 + sin(frameCount * 0.02 + i * 1.7) * 8, z: 300 * sin(a) };
   }
 
   actualizar() {
     for (const p of this.libres) {
-      p.vel.add(p5.Vector.random2D().mult(0.2)).limit(0.8);
+      p.vel.add(p5.Vector.random3D().mult(0.08)).limit(0.6);
       p.pos.add(p.vel);
-      p.pos.x = (p.pos.x + this.w) % this.w;
-      p.pos.y = (p.pos.y + this.h) % this.h;
+      const r = Math.hypot(p.pos.x, p.pos.z);
+      if (r > 175) { p.pos.x *= 175 / r; p.pos.z *= 175 / r; p.vel.x *= -1; p.vel.z *= -1; }
+      if (p.pos.y < -300 || p.pos.y > -15) { p.pos.y = constrain(p.pos.y, -300, -15); p.vel.y *= -1; }
     }
     for (const b of this.boids) b.flock(this.boids);
-    for (const b of this.boids) b.mover(this.w, this.h);
+    for (const b of this.boids) b.mover();
   }
 
   energia() {
@@ -127,55 +157,71 @@ class Prompt {
     };
   }
 
-  dibujarForma(g, celdas, x, y, escala) {
-    g.noStroke();
-    g.fill(170, 200, 150); // color plano: sin capas, sin historia
-    const s = Math.max(1, CELDA * escala);
-    for (const c of celdas) g.rect(x + c.x * CELDA * escala, y + c.y * CELDA * escala, s, s);
+  dibujar(conVariantes) {
+    piedra();
+
+    noStroke();
+    fill(PALETA.pastel);
+    if (this.actual) model(this.actual.malla);
+
+    if (conVariantes) {
+      this.variantes.forEach((v, i) => {
+        const p = this.posVariante(i);
+        push();
+        translate(p.x, p.y, p.z);
+        rotateY(frameCount * 0.008 + i);
+        scale(ESCALA_VARIANTE);
+        piedra();
+        noStroke();
+        fill(PALETA.pastel);
+        model(v.malla);
+        pop();
+      });
+    }
+
+    // energía libre
+    stroke(PALETA.dusty);
+    strokeWeight(2.5);
+    beginShape(POINTS);
+    for (const p of this.libres) vertex(p.pos.x, p.pos.y, p.pos.z);
+    endShape();
+
+    // capa de decisiones: pétalos orientados según su velocidad
+    noStroke();
+    for (const b of this.boids) {
+      const v = b.vel;
+      push();
+      translate(b.pos.x, b.pos.y, b.pos.z);
+      rotateY(Math.atan2(-v.z, v.x));
+      rotateZ(Math.atan2(v.y, Math.hypot(v.x, v.z)));
+      fill(b.col);
+      ellipsoid(7, 2.2, 3.5, 8, 5);
+      pop();
+    }
   }
 
-  dibujar() {
-    const g = this.pg;
-    g.background(12);
-
-    // forma elegida, en el área bajo las miniaturas
-    if (this.actual) {
-      const top = THUMB_Y + THUMB + 15;
-      const esc = (this.h - top - 10) / this.h;
-      this.dibujarForma(g, this.actual, (this.w - this.w * esc) / 2, top, esc);
-    }
-
-    for (let i = 0; i < 4; i++) {
-      const tx = this.thumbX(i);
-      g.fill(25);
-      g.stroke(70);
-      g.rect(tx, THUMB_Y, THUMB, THUMB);
-      if (this.variantes[i]) this.dibujarForma(g, this.variantes[i], tx, THUMB_Y, THUMB / this.w);
-    }
-
-    g.noStroke();
-    g.fill(255, 120);
-    for (const p of this.libres) g.circle(p.pos.x, p.pos.y, 3);
-
-    for (const b of this.boids) b.dibujar(g);
-
-    if (this.libres.length * this.eParticula < COSTO_DECISION) {
-      g.fill(230);
-      g.textAlign(CENTER, BOTTOM);
-      g.textSize(13);
-      g.text('sin energía libre: ya no hay más decisiones', this.w / 2, this.h - 8);
-    }
-    return g;
+  // click en pantalla: ¿cayó sobre alguna variante?
+  clicPantalla(mx, my, shift) {
+    let mejor = -1, mejorD = 90;
+    this.variantes.forEach((v, i) => {
+      const p = this.posVariante(i);
+      const s = proyectar(p.x, p.y - 140 * ESCALA_VARIANTE, p.z);
+      const d = dist(mx, my, s.x, s.y);
+      if (d < mejorD) { mejor = i; mejorD = d; }
+    });
+    if (mejor < 0) return;
+    if (shift) this.combinar(mejor);
+    else this.elegir(mejor);
   }
 }
 
-// Flocking: separación, alineación, cohesión
-class Boid {
-  constructor(x, y, col) {
-    this.pos = createVector(x, y);
-    this.vel = p5.Vector.random2D().mult(2);
+// Flocking 3D: separación, alineación, cohesión (+ no alejarse de la piedra)
+class Boid3 {
+  constructor(pos, hex) {
+    this.pos = pos.copy();
+    this.vel = p5.Vector.random3D().mult(2);
     this.acc = createVector();
-    this.col = col;
+    this.col = color(hex);
   }
 
   flock(boids) {
@@ -183,41 +229,32 @@ class Boid {
     let nSep = 0, nVec = 0;
     for (const o of boids) {
       if (o === this) continue;
-      const d = p5.Vector.dist(this.pos, o.pos);
-      if (d < 50) {
+      const d = this.pos.dist(o.pos);
+      if (d < 70) {
         ali.add(o.vel);
         coh.add(o.pos);
         nVec++;
-        if (d < 14) {
+        if (d < 22) {
           sep.add(p5.Vector.sub(this.pos, o.pos).div(d || 1));
           nSep++;
         }
       }
     }
     if (nVec) {
-      ali.div(nVec).setMag(2).sub(this.vel).limit(0.05);
-      coh.div(nVec).sub(this.pos).setMag(2).sub(this.vel).limit(0.04);
+      ali.div(nVec).setMag(2.2).sub(this.vel).limit(0.04);
+      coh.div(nVec).sub(this.pos).setMag(2.2).sub(this.vel).limit(0.03);
       this.acc.add(ali).add(coh);
     }
-    if (nSep) this.acc.add(sep.div(nSep).setMag(2).sub(this.vel).limit(0.08));
+    if (nSep) this.acc.add(sep.div(nSep).setMag(2.2).sub(this.vel).limit(0.07));
+
+    const c = createVector(CENTRO_ENJAMBRE.x - this.pos.x, CENTRO_ENJAMBRE.y - this.pos.y, CENTRO_ENJAMBRE.z - this.pos.z);
+    const dc = c.mag();
+    if (dc > 230) this.acc.add(c.setMag(Math.min(0.15, (dc - 230) * 0.002)));
   }
 
-  mover(w, h) {
-    this.vel.add(this.acc).limit(2);
+  mover() {
+    this.vel.add(this.acc).limit(2.2);
     this.pos.add(this.vel);
     this.acc.mult(0);
-    this.pos.x = (this.pos.x + w) % w;
-    this.pos.y = (this.pos.y + h) % h;
-  }
-
-  dibujar(g) {
-    const a = this.vel.heading();
-    g.push();
-    g.translate(this.pos.x, this.pos.y);
-    g.rotate(a);
-    g.noStroke();
-    g.fill(...this.col, 220);
-    g.triangle(5, 0, -4, 3, -4, -3);
-    g.pop();
   }
 }
