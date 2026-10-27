@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "obra",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\Users\\MARIANA\\AppData\\Local\\Temp\\claude\\C--Users-MARIANA-Documents-GitHub-unidad-8\\490631d9-f2e4-46fc-8a5a-e975481582d8\\scratchpad\\serve.ps1", "-Root", "C:\\Users\\MARIANA\\Documents\\GitHub\\unidad_8"],
+      "port": 8765
+    }
+  ]
+}
