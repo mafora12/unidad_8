@@ -73,15 +73,6 @@ Todo lo hice con IA, pero yo di mis ideas.
 
 ---
 
-### Sesión 2 — fecha
-- Qué probé:
-- Qué falló o no funcionó:
-- Qué me sorprendió:
-- Qué entendí que antes no:
-- Dónde puse el esfuerzo hoy (yo / IA / ambos):
-
----
-
 ## Presentación
 
 ### 1. ¿Cómo interpreté la pregunta Why Bother?
