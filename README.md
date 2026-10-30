@@ -1,5 +1,6 @@
 # Nada se pierde, todo se transforma
-**Pregunta central:** ¿Dónde queda el esfuerzo cuando el hacer se automatiza?
+**Pregunta central:** ¿Dónde queda el esfuerzo cuando el hacer se automatiza?  
+https://mafora12.github.io/unidad_8/  
 
 ### Sesión 1 — 27 de octubre de 2026
 **Conceptualización e interpretación de la charla**
