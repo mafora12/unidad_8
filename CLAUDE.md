@@ -29,7 +29,7 @@ Referencias: meandros de Harold Fisk, flocking (3 reglas), musgo en las grietas 
 ## Forma de trabajo
 - Respuestas directas y concisas, en español. Editar archivos directamente.
 - Si Mariana tiene una visión clara, ejecutarla con precisión. No reinterpretar.
-- `BITACORA.md`: al final de cada sesión, recordarle que anote. Las entradas las escribe ella con sus palabras (base de su presentación, preguntas 2–5). **No redactarlas por ella**; solo ofrecer las preguntas guía de la plantilla.
+- Bitácora: vive en `README.md` (sección Bitácora). Por sesión, el **Registro** (qué se probó, qué falló, hechos verificables) puede escribirlo Claude. **Mis notas** (qué me sorprendió, qué entendí, dónde puse el esfuerzo) las escribe Mariana con sus palabras, porque son la base de su presentación (preguntas 2–5): no redactarlas por ella. Al final de cada sesión, recordarle que las llene.
 
 ## Presentación (Actividad 03)
 1. ¿Cómo interpretaste Why Bother? ¿Qué aspecto exploraste y cómo cambió tu interpretación? (borrador inicial hecho; falta "cómo cambió")
