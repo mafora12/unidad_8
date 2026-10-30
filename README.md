@@ -226,3 +226,7 @@ Mi conclusión es que el trabajo creativo no desaparece necesariamente cuando ap
 Por eso mi respuesta a Why Bother? es que vale la pena seguir creando porque todavía tenemos ideas que explorar, preguntas que hacer y mundos que materializar. No importa únicamente con qué herramienta lo hagamos, sino qué queremos expresar y qué decisiones tomamos durante el proceso.
 
 **Nada se pierde, todo se transforma.**
+
+## Autoevaluación  
+5.0  
+
