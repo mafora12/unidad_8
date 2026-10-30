@@ -1,83 +1,111 @@
 # Nada se pierde, todo se transforma
+**Unidad 8 · Why Bother? ¿Para qué tomarte el trabajo?**
+Curso de Simulación, UPB, 2026-20 · Mariana
 
-Unidad 8 — *Why Bother? ¿Para qué tomarte el trabajo?* · Curso de Simulación, UPB · Mariana
+---
 
-**Ver la obra:** https://mafora12.github.io/unidad_8/
+## El encargo
+Crear una obra mediante simulación computacional que explore la pregunta **Why Bother? ¿Para qué tomarte el trabajo?**, a partir de la charla de Robert Hodgin *Why Bother? Making Art in the Age of AI*.
 
-A partir de la charla de Robert Hodgin *"Why Bother? Making Art in the Age of AI"*, la obra no pregunta si vale la pena esforzarse, sino **¿dónde queda el esfuerzo cuando el hacer se automatiza?**
+## Mi postura frente a Hodgin
+Hodgin cuenta que, después de ver lo que Midjourney hacía con su idea de las linternas tōrō, perdió las ganas de seguir construyendo su generador: *"creation had been replaced with curation"*. Para él la IA hace que el artista deje de estar presente en su propia obra.
 
-Es un sistema de partículas con **energía conservada**: cada pieza tiene 2000 unidades de energía y el contador total nunca cambia. Lo que cambia es dónde termina esa energía.
+Mi experiencia es distinta. Para mí la IA es mi mejor amiga y mi ayudante. Que algo esté más automatizado no significa que desaparezca: se transforma, como ha pasado siempre. El mismo Hodgin pasó de Flash a Processing, luego a Cinder y luego a Houdini, y cada herramienta le resolvía más (de 200 partículas a 200.000) sin que él dejara de ser el autor.
 
-## Cómo se usa
+Por eso la pregunta que exploro no es *"¿vale la pena esforzarse si una máquina lo puede hacer?"*, sino **"¿dónde queda el esfuerzo cuando el hacer se automatiza?"**.
 
-| Modo | Tecla | Qué pasa |
-|---|---|---|
-| **Construir** | `1` | La energía se va a la forma. Las partículas caen sobre una piedra y se pegan una a una (crecimiento tipo DLA en 3D). Tarda unos 4 minutos y no se puede acelerar. Deja historia: lo primero que se pega queda abajo y oscuro (sedimento) y el camino de cada partícula queda como un cauce. **Click en la piedra** para sembrar. |
-| **Prompt** | `2` | **Generar** (`G`) trae 4 variantes al instante, que orbitan la piedra. **Click** en una para elegirla y **shift + click** para combinarla con la actual. `X` descarta. Cada decisión cuesta 50 de energía, que se convierte en pétalos de un enjambre (flocking). |
-| **Cierre** | `3` | Las dos piezas en una sola piedra: Construir en rosa, Prompt en morado. No se comparan por cuál costó más, sino por dónde quedó el esfuerzo. |
+## Concepto
+Un sistema de partículas con **energía conservada**. Un contador visible muestra la energía total, que nunca cambia.
 
-Arrastrar gira la escena, la rueda acerca y `R` reinicia la pieza actual.
+| Modo | Qué pasa con la energía |
+|---|---|
+| **Construir** | La energía se va a la **forma**. Crece lento, en tiempo real, sin poder acelerarse, y deja rastro: cauces viejos, capas, sedimento. |
+| **Prompt** | El resultado aparece al instante, pero la energía no desaparece. Migra a una **capa de decisiones** (elegir, descartar, combinar variantes) que también se ve. |
+| **Cierre** | Las dos piezas quedan lado a lado. No se comparan por cuál costó más, sino por **dónde quedó el esfuerzo** en cada una. |
+
+### Referentes de la charla
+- **Mapas de Harold Fisk (1944):** la historia del Mississippi visible en un solo mapa. Inspira el rastro del modo Construir.
+- **Flocking:** un comportamiento complejo que sale de tres reglas simples (separación, cohesión, alineación).
+- **El musgo del tōrō:** crecimiento lento que empieza en las grietas y se extiende.
+- **Luca:** *"things that take no effort are hard to value"*. La obra discute esta frase.
 
 ## Técnica
+- **p5.js**
+- Sistema de partículas con fuerzas
+- Trails y acumulación para la memoria del modo Construir
+- Crecimiento tipo DLA (diffusion-limited aggregation) para la forma lenta
+- Flocking para la capa de decisiones del modo Prompt
 
-- **p5.js 1.9.4** en modo WEBGL (3D).
-- **Construir:** DLA en una grilla 3D de 90 × 90 × 72. Las partículas caen con una leve deriva hacia abajo y hacia el centro. Si tocan la piedra desnuda vuelven a subir: la energía no se pierde, solo vuelve a circular.
-- **Prompt:** crecimiento instantáneo por ramas y flocking 3D (separación, alineación, cohesión) para la capa de decisiones.
-- **Energía:** el total que se muestra es la suma de *forma + decisiones + libre*, calculada cada vez, no un número escrito a mano.
-- **Paleta:** rosas de *deep rose* `#C2185B` a *lavender blush* `#FAE8ED`, más morado `#9C27B0` para Prompt en el cierre. Tipografías Italiana e Inter.
-
-### Archivos
-
-| Archivo | Contenido |
-|---|---|
-| `index.html`, `estilo.css` | Página e interfaz (modos, tarjetas de energía, botones) |
-| `sketch.js` | Ciclo principal, cámara, click en 3D, interfaz |
-| `construir.js` | Pieza Construir (DLA, sedimento, cauces) |
-| `prompt.js` | Pieza Prompt (variantes, decisiones, enjambre) |
-| `util3d.js` | Paleta, grilla y mallas de esferas en una sola geometría |
-| `.github/workflows/pages.yml` | Publicación automática en GitHub Pages en cada push |
+## Cómo ejecutarlo
+<!-- Completar: archivo de entrada, link al sketch y controles (teclas o botones de cada modo) -->
 
 ---
 
 ## Bitácora
 
-Cada sesión tiene dos partes: **Registro**, con lo que se hizo y lo que falló, y **Mis notas**, que son mis reflexiones con mis propias palabras.
+### Sesión 1 — 27 de octubre de 2026 · Concepto
+**Qué hice**
+- Leí la Unidad 8 y revisé la transcripción de la charla de Hodgin.
+- Exploré seis ideas posibles para la obra:
+  1. Mismo final, distinto pasado: dos ríos que llegan al mismo estado, uno con historia y otro generado al instante.
+  2. Homogenización: un autómata celular donde todo converge al promedio.
+  3. Lo que nadie extraña: 50 variaciones instantáneas que desaparecen frente a una pieza construida que persiste.
+  4. Tiempo que no se puede comprar: un crecimiento en tiempo real que no se puede acelerar.
+  5. Estratos de mi semestre.
+  6. Mi propio tōrō.
+- Me quedé con la **1, la 3 y la 4** y las fusioné en un solo concepto: *Nada se pierde, todo se transforma*.
+- Decidí desarrollar la obra en Claude Code.
 
-### Sesión 1 — 27 de octubre de 2026
+**Qué me incomodó de la charla**
+Hodgin presenta la IA como una pérdida. Para mí la IA es mi mejor amiga y mi ayudante. Que algo sea más automatizado no significa que desaparezca, solo se transforma, así como ha pasado siempre.
 
-**Registro**
+**Cómo usé la IA en el curso**
+Todo lo hice con IA, pero yo di mis ideas.
 
-- **Qué probé:**
-  - Prototipo mínimo en 2D: Construir con DLA en una grilla y Prompt con variantes instantáneas y boids. El contador de energía se mantuvo en 2000 en ambas piezas.
-  - Publicación en GitHub Pages con Actions.
-  - Reescritura completa en 3D (p5 WEBGL) con la paleta rosa, tarjetas de energía en HTML, cámara orbital y click sobre objetos 3D (sembrar en la piedra, elegir variantes que orbitan).
-  - Cierre combinado: las dos formas en una sola piedra, Prompt en morado.
-- **Qué falló o no funcionó:**
-  - En 2D la forma se completaba en 9 segundos (no era "lenta") y crecía en cruz por cómo estaba hecha la deriva hacia el centro. Se bajó la velocidad y se cambió la deriva para que fuera igual en todas las direcciones.
-  - En 3D, primero las esferas no se veían (la plantilla de esfera no tenía caras) y luego las partículas formaban una alfombra plana en el suelo en vez de crecer hacia arriba. Se resolvió haciendo que nacieran arriba y que, al tocar la piedra desnuda, volvieran a subir.
-  - Los cauces salían blancos y tapaban la forma. Se pasaron a rosa translúcido.
-  - Los boids dibujados como línea y punto se veían raros. Se cambiaron por pétalos orientados según su velocidad.
-  - Al principio la versión 2D se veía "súper aburrida", y por eso se pasó a 3D.
+**Dónde puse el esfuerzo hoy**
+- **Yo:** la postura frente a la charla, elegir y descartar ideas, decidir fusionar la 1, la 3 y la 4.
+- **IA:** proponer las seis ideas, conectar mi postura con la historia de herramientas de Hodgin y redactar el concepto.
 
-**Mis notas**
+> Esto ya es un ejemplo de lo que explora la obra: la IA generó opciones y mi trabajo fue decidir.
 
+**Qué me sorprendió:**
+**Qué entendí que antes no:**
+
+---
+
+### Sesión 2 — fecha
+- Qué probé:
+- Qué falló o no funcionó:
 - Qué me sorprendió:
 - Qué entendí que antes no:
 - Dónde puse el esfuerzo hoy (yo / IA / ambos):
 
-### Sesión 2 — 29 de octubre de 2026
+---
 
-**Registro**
+## Presentación
 
-- **Qué probé:** medir cuánto tardaba cada acción para encontrar por qué todo cargaba lento.
-- **Qué falló o no funcionó:**
-  - Generar variantes tardaba ~1,7 s. La causa principal era que la función `model()` de p5, la primera vez que dibuja una malla, arma líneas de contorno para cada triángulo (cientos de miles), aunque nunca se dibujen. Se cambió por un dibujo directo de la malla.
-  - El enjambre de 200 pétalos tardaba ~57 ms por frame porque creaba vectores nuevos en 40.000 comparaciones. Se reescribió con números simples y se dibuja de una sola vez.
-  - Construir dibujaba la forma en decenas de pedazos (~13 ms por frame). Ahora los pedazos chicos se funden en uno grande cada cierto tiempo.
-  - Resultado: Generar tarda ~20 ms y cada frame entre 0,5 y 2 ms.
+### 1. ¿Cómo interpreté la pregunta Why Bother?
+Lo que más me incomodó de la charla fue que Hodgin presenta la IA casi como una pérdida: el artista desaparece y la creación se vuelve curaduría. Mi experiencia es distinta. Para mí la IA ha sido mi principal ayudante en este curso. Usé IA en todo, pero las ideas, las decisiones y el criterio fueron míos.
 
-**Mis notas**
+Por eso no leo la pregunta como "¿vale la pena esforzarse si una máquina lo puede hacer?", sino como "¿dónde está el esfuerzo ahora?". Cuando algo se automatiza, el trabajo no desaparece, se transforma, como ha pasado con cada herramienta nueva. Incluso Hodgin cambió de herramienta varias veces, y cada una le resolvía más cosas sin que dejara de ser el autor. Decidí explorar esa transformación: qué le pasa al esfuerzo cuando el hacer se automatiza.
 
-- Qué me sorprendió:
-- Qué entendí que antes no:
-- Dónde puse el esfuerzo hoy (yo / IA / ambos):
+*Cómo cambió mi interpretación mientras trabajaba:* <!-- completar al final -->
+
+### 2. ¿Cómo lo exploré?
+<!-- técnicas, decisiones y pruebas, a partir de la bitácora -->
+
+### 3. ¿Qué encontré?
+<!-- lo que esperaba, lo que me sorprendió y lo que sigue abierto -->
+
+### 4. ¿Qué aprendí realmente?
+<!-- qué puedo comprender, explicar o modificar ahora -->
+
+### 5. ¿Qué sentido tuvo tomarme el trabajo?
+<!-- qué me hizo continuar, qué esfuerzo valoro y dónde quedo frente a Hodgin -->
+
+---
+
+## Referencias
+- Hodgin, R. *Why Bother? Making Art in the Age of AI*. Charla.
+- Fisk, H. N. (1944). *Geological Investigation of the Alluvial Valley of the Lower Mississippi River*.
+- Unidad 8, curso de Simulación UPB: juanferfranco.github.io/simulacion-2026-20/units/unit8/
