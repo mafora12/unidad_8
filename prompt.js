@@ -25,6 +25,34 @@ const COLOR_ACCION_MORADO = {
 // color plano por variante: sin capas, sin historia
 const COLORES_VARIANTE = [PALETA.amaranth, PALETA.cherry, PALETA.blush, PALETA.pink];
 
+// Una forma guarda sus celdas y arma sus mallas solo cuando hacen falta:
+// la miniatura (detalle bajo) al generarla, la grande al elegirla, la morada en el Cierre.
+class Forma {
+  constructor(celdas) {
+    this.celdas = celdas;
+    this.mallas = {};
+  }
+
+  malla(tipo) {
+    if (!this.mallas[tipo]) {
+      const morada = tipo === 'morada';
+      const col = morada ? rgbNorm(MORADO) : null;
+      // las moradas un poco más pequeñas que las de Construir para que no parpadeen donde coinciden
+      const r = morada ? S * 0.55 : S * 0.62;
+      this.mallas[tipo] = mallaEsferas(
+        this.celdas.map(c => ({ ...mundo(c.x, c.h, c.z), r, c: col || c.c })),
+        tipo === 'mini' ? 'bajo' : 'alto'
+      );
+    }
+    return this.mallas[tipo];
+  }
+
+  liberar() {
+    for (const m of Object.values(this.mallas)) freeGeometry(m);
+    this.mallas = {};
+  }
+}
+
 class Prompt {
   constructor() {
     this.variantes = [];
@@ -33,10 +61,8 @@ class Prompt {
   }
 
   reiniciar() {
-    for (const v of this.variantes) freeGeometry(v.malla);
-    if (this.actual && !this.variantes.includes(this.actual)) freeGeometry(this.actual.malla);
-    if (this.morada) freeGeometry(this.morada.malla);
-    this.morada = null; // versión morada de la forma actual, para el Cierre
+    for (const v of this.variantes) v.liberar();
+    if (this.actual) this.actual.liberar();
     this.eParticula = E_TOTAL / N_PROMPT;
     this.libres = [];
     for (let i = 0; i < N_PROMPT; i++) {
@@ -68,9 +94,9 @@ class Prompt {
     return true;
   }
 
-  // libera la malla de una forma que ya no se ve en ningún lado
+  // libera las mallas de una forma que ya no se ve en ningún lado
   soltar(v) {
-    if (v && v !== this.actual && !this.variantes.includes(v)) freeGeometry(v.malla);
+    if (v && v !== this.actual && !this.variantes.includes(v)) v.liberar();
   }
 
   generar() {
@@ -91,8 +117,7 @@ class Prompt {
     if (!this.actual || !this.variantes[i] || !this.gastar('combinar')) return;
     const antes = this.actual;
     const mitad = GX / 2;
-    const celdas = antes.celdas.filter(c => c.x < mitad).concat(this.variantes[i].celdas.filter(c => c.x >= mitad));
-    this.actual = { celdas, malla: this.malla(celdas) };
+    this.actual = new Forma(antes.celdas.filter(c => c.x < mitad).concat(this.variantes[i].celdas.filter(c => c.x >= mitad)));
     this.soltar(antes);
   }
 
@@ -103,24 +128,21 @@ class Prompt {
     this.soltar(antes);
   }
 
-  malla(celdas) {
-    return mallaEsferas(celdas.map(c => ({ ...mundo(c.x, c.h, c.z), r: S * 0.62, c: c.c })));
-  }
-
   // crecimiento instantáneo: ramas que suben desde puntos recientes, sin historia
   generarForma() {
-    const ocupadas = new Set();
+    const ocupadas = new Uint8Array(GX * GZ * GH);
     const celdas = [];
     const col = rgbNorm(random(COLORES_VARIANTE));
     const sesgo = random(0.12, 0.45);  // qué tan largas son las ramas
     const subir = random(0.3, 0.7);    // qué tan alta es la forma
-    const agregar = (x, h, z) => { ocupadas.add(indice(x, h, z)); celdas.push({ x, h, z, c: col }); };
+    const agregar = (x, h, z) => { ocupadas[indice(x, h, z)] = 1; celdas.push({ x, h, z, c: col }); };
+    const ocupada = (x, h, z) => x >= 0 && x < GX && z >= 0 && z < GZ && h >= 0 && h < GH && ocupadas[indice(x, h, z)] === 1;
     const vecinos = (x, h, z) => {
       let n = 0;
       for (let dh = -1; dh <= 1; dh++)
         for (let dz = -1; dz <= 1; dz++)
           for (let dx = -1; dx <= 1; dx++)
-            if ((dx || dh || dz) && ocupadas.has(indice(x + dx, h + dh, z + dz))) n++;
+            if ((dx || dh || dz) && ocupada(x + dx, h + dh, z + dz)) n++;
       return n;
     };
 
@@ -130,15 +152,17 @@ class Prompt {
     }
     let intentos = 0;
     while (celdas.length < CELDAS_FORMA && intentos++ < CELDAS_FORMA * 40) {
-      const p = celdas[floor(celdas.length * pow(random(), sesgo))];
-      const x = p.x + floor(random(3)) - 1;
-      const z = p.z + floor(random(3)) - 1;
-      const h = p.h + (random() < subir ? 1 : random() < 0.2 ? -1 : 0);
+      const p = celdas[Math.floor(celdas.length * Math.pow(Math.random(), sesgo))];
+      const x = p.x + Math.floor(Math.random() * 3) - 1;
+      const z = p.z + Math.floor(Math.random() * 3) - 1;
+      const h = p.h + (Math.random() < subir ? 1 : Math.random() < 0.2 ? -1 : 0);
       if (h < 0 || h >= GH || !dentro(x, z)) continue;
-      if (ocupadas.has(indice(x, h, z)) || vecinos(x, h, z) > 2) continue;
+      if (ocupadas[indice(x, h, z)] || vecinos(x, h, z) > 2) continue;
       agregar(x, h, z);
     }
-    return { celdas, malla: this.malla(celdas) };
+    const forma = new Forma(celdas);
+    forma.malla('mini');
+    return forma;
   }
 
   // las variantes orbitan despacio alrededor de la piedra (coordenadas de mundo)
@@ -172,7 +196,7 @@ class Prompt {
 
     noStroke();
     fill(PALETA.pastel);
-    if (this.actual) model(this.actual.malla);
+    if (this.actual) dibujarMalla(this.actual.malla('grande'));
 
     if (conVariantes) {
       this.variantes.forEach((v, i) => {
@@ -184,7 +208,7 @@ class Prompt {
         piedra();
         noStroke();
         fill(PALETA.pastel);
-        model(v.malla);
+        dibujarMalla(v.malla('mini'));
         pop();
       });
     }
@@ -194,16 +218,9 @@ class Prompt {
 
   // Cierre: la forma y el enjambre en morado, sobre la piedra de Construir (sin piedra propia)
   dibujarFusion() {
-    if (this.actual && (!this.morada || this.morada.de !== this.actual)) {
-      if (this.morada) freeGeometry(this.morada.malla);
-      const col = rgbNorm(MORADO);
-      // un poco más pequeñas que las de Construir para que no parpadeen donde coinciden
-      const malla = mallaEsferas(this.actual.celdas.map(c => ({ ...mundo(c.x, c.h, c.z), r: S * 0.55, c: col })));
-      this.morada = { de: this.actual, malla };
-    }
     noStroke();
     fill('#E1BEE7');
-    if (this.actual) model(this.morada.malla);
+    if (this.actual) dibujarMalla(this.actual.malla('morada'));
     this.dibujarEnergia(true);
   }
 
@@ -215,18 +232,30 @@ class Prompt {
     for (const p of this.libres) vertex(p.pos.x, p.pos.y, p.pos.z);
     endShape();
 
-    // capa de decisiones: pétalos orientados según su velocidad
+    // capa de decisiones: pétalos (dos rombos cruzados) orientados según su velocidad,
+    // todos en una sola figura para que sea un único dibujo por frame
+    if (!this.boids.length) return;
     noStroke();
+    noLights(); // color plano; las luces se vuelven a poner al inicio del siguiente frame
+    beginShape(TRIANGLES);
     for (const b of this.boids) {
-      const v = b.vel;
-      push();
-      translate(b.pos.x, b.pos.y, b.pos.z);
-      rotateY(Math.atan2(-v.z, v.x));
-      rotateZ(Math.atan2(v.y, Math.hypot(v.x, v.z)));
       fill(morado ? b.colMorado : b.col);
-      ellipsoid(7, 2.2, 3.5, 8, 5);
-      pop();
+      const sp = Math.hypot(b.vx, b.vy, b.vz) || 1;
+      const dx = b.vx / sp, dy = b.vy / sp, dz = b.vz / sp;
+      // lado = dirección × (0,1,0); arriba = lado × dirección
+      let lx = -dz, lz = dx;
+      const ll = Math.hypot(lx, lz) || 1;
+      lx /= ll; lz /= ll;
+      const ux = -lz * dy, uy = lz * dx - lx * dz, uz = lx * dy;
+      const tx = b.x + dx * 7, ty = b.y + dy * 7, tz = b.z + dz * 7;   // punta
+      const cx = b.x - dx * 6, cy = b.y - dy * 6, cz = b.z - dz * 6;   // cola
+      const w = 3, hgt = 2;
+      vertex(tx, ty, tz); vertex(b.x + lx * w, b.y, b.z + lz * w); vertex(cx, cy, cz);
+      vertex(tx, ty, tz); vertex(b.x - lx * w, b.y, b.z - lz * w); vertex(cx, cy, cz);
+      vertex(tx, ty, tz); vertex(b.x + ux * hgt, b.y + uy * hgt, b.z + uz * hgt); vertex(cx, cy, cz);
+      vertex(tx, ty, tz); vertex(b.x - ux * hgt, b.y - uy * hgt, b.z - uz * hgt); vertex(cx, cy, cz);
     }
+    endShape();
   }
 
   // click en pantalla: ¿cayó sobre alguna variante?
@@ -244,47 +273,69 @@ class Prompt {
   }
 }
 
-// Flocking 3D: separación, alineación, cohesión (+ no alejarse de la piedra)
+// Flocking 3D: separación, alineación, cohesión (+ no alejarse de la piedra).
+// Con números sueltos en vez de vectores: 200 boids se comparan 40.000 veces por frame.
+const R_VECINOS = 70, R_SEPARAR = 22, VEL_MAX = 2.2, R_ENJAMBRE = 230;
+
+function limitar(x, y, z, m) {
+  const l = Math.hypot(x, y, z);
+  return l > m ? [x / l * m, y / l * m, z / l * m] : [x, y, z];
+}
+
+// dirección deseada (con magnitud VEL_MAX) menos la velocidad actual, limitada a f
+function girarHacia(b, x, y, z, f) {
+  const l = Math.hypot(x, y, z) || 1;
+  return limitar(x / l * VEL_MAX - b.vx, y / l * VEL_MAX - b.vy, z / l * VEL_MAX - b.vz, f);
+}
+
 class Boid3 {
   constructor(pos, accion) {
-    this.pos = pos.copy();
-    this.vel = p5.Vector.random3D().mult(2);
-    this.acc = createVector();
+    this.x = pos.x; this.y = pos.y; this.z = pos.z;
+    const v = p5.Vector.random3D().mult(2);
+    this.vx = v.x; this.vy = v.y; this.vz = v.z;
+    this.ax = 0; this.ay = 0; this.az = 0;
     this.col = color(COLOR_ACCION[accion]);
     this.colMorado = color(COLOR_ACCION_MORADO[accion]);
   }
 
   flock(boids) {
-    const sep = createVector(), ali = createVector(), coh = createVector();
-    let nSep = 0, nVec = 0;
+    let sx = 0, sy = 0, sz = 0, nSep = 0;
+    let ax = 0, ay = 0, az = 0, cx = 0, cy = 0, cz = 0, nVec = 0;
     for (const o of boids) {
       if (o === this) continue;
-      const d = this.pos.dist(o.pos);
-      if (d < 70) {
-        ali.add(o.vel);
-        coh.add(o.pos);
-        nVec++;
-        if (d < 22) {
-          sep.add(p5.Vector.sub(this.pos, o.pos).div(d || 1));
-          nSep++;
-        }
+      const dx = this.x - o.x, dy = this.y - o.y, dz = this.z - o.z;
+      const d2 = dx * dx + dy * dy + dz * dz;
+      if (d2 > R_VECINOS * R_VECINOS) continue;
+      ax += o.vx; ay += o.vy; az += o.vz;
+      cx += o.x; cy += o.y; cz += o.z;
+      nVec++;
+      if (d2 < R_SEPARAR * R_SEPARAR) {
+        const d2s = d2 || 1;
+        sx += dx / d2s; sy += dy / d2s; sz += dz / d2s;
+        nSep++;
       }
     }
     if (nVec) {
-      ali.div(nVec).setMag(2.2).sub(this.vel).limit(0.04);
-      coh.div(nVec).sub(this.pos).setMag(2.2).sub(this.vel).limit(0.03);
-      this.acc.add(ali).add(coh);
+      const a = girarHacia(this, ax, ay, az, 0.04);
+      const c = girarHacia(this, cx / nVec - this.x, cy / nVec - this.y, cz / nVec - this.z, 0.03);
+      this.ax += a[0] + c[0]; this.ay += a[1] + c[1]; this.az += a[2] + c[2];
     }
-    if (nSep) this.acc.add(sep.div(nSep).setMag(2.2).sub(this.vel).limit(0.07));
+    if (nSep) {
+      const s = girarHacia(this, sx, sy, sz, 0.07);
+      this.ax += s[0]; this.ay += s[1]; this.az += s[2];
+    }
 
-    const c = createVector(CENTRO_ENJAMBRE.x - this.pos.x, CENTRO_ENJAMBRE.y - this.pos.y, CENTRO_ENJAMBRE.z - this.pos.z);
-    const dc = c.mag();
-    if (dc > 230) this.acc.add(c.setMag(Math.min(0.15, (dc - 230) * 0.002)));
+    const kx = CENTRO_ENJAMBRE.x - this.x, ky = CENTRO_ENJAMBRE.y - this.y, kz = CENTRO_ENJAMBRE.z - this.z;
+    const dc = Math.hypot(kx, ky, kz);
+    if (dc > R_ENJAMBRE) {
+      const f = Math.min(0.15, (dc - R_ENJAMBRE) * 0.002) / dc;
+      this.ax += kx * f; this.ay += ky * f; this.az += kz * f;
+    }
   }
 
   mover() {
-    this.vel.add(this.acc).limit(2.2);
-    this.pos.add(this.vel);
-    this.acc.mult(0);
+    [this.vx, this.vy, this.vz] = limitar(this.vx + this.ax, this.vy + this.ay, this.vz + this.az, VEL_MAX);
+    this.x += this.vx; this.y += this.vy; this.z += this.vz;
+    this.ax = 0; this.ay = 0; this.az = 0;
   }
 }

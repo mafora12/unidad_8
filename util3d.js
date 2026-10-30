@@ -39,7 +39,6 @@ function gradiente(hexes, t) {
   return [0, 1, 2].map(j => lerp(cols[i][j], cols[i + 1][j], k));
 }
 
-let plantillaEsfera = null;
 let siguienteId = 0;
 
 // esfera unitaria de latitud/longitud con caras indexadas
@@ -63,25 +62,38 @@ function esferaBase(lon, lat) {
   return g;
 }
 
+const plantillas = {};
+
 // Muchas esferas en una sola geometría: un solo draw call para cientos de partículas.
 // puntos: [{x, y, z, r, c: [r, g, b]}] en coordenadas de mundo
-function mallaEsferas(puntos) {
-  if (!plantillaEsfera) plantillaEsfera = esferaBase(8, 6);
-  const t = plantillaEsfera;
+// detalle 'alto' para lo que se ve de cerca, 'bajo' para las miniaturas (se arma 4 veces más rápido)
+function mallaEsferas(puntos, detalle = 'alto') {
+  if (!plantillas[detalle]) plantillas[detalle] = detalle === 'alto' ? esferaBase(6, 4) : esferaBase(4, 2);
+  const t = plantillas[detalle];
   const g = new p5.Geometry();
   g.gid = 'esferas-' + siguienteId++; // p5 guarda los buffers por gid: cada malla necesita el suyo
   const nv = t.vertices.length;
-  puntos.forEach((p, k) => {
+  const vs = g.vertices, ns = g.vertexNormals, cs = g.vertexColors, fs = g.faces;
+  for (let k = 0; k < puntos.length; k++) {
+    const p = puntos[k];
     const base = k * nv;
     for (let i = 0; i < nv; i++) {
       const v = t.vertices[i];
-      g.vertices.push(new p5.Vector(v.x * p.r + p.x, v.y * p.r + p.y, v.z * p.r + p.z));
-      g.vertexNormals.push(t.vertexNormals[i]);
-      g.vertexColors.push(p.c[0], p.c[1], p.c[2], 1);
+      // objetos simples en vez de p5.Vector: p5 solo lee x, y, z al subirlos a la GPU
+      vs.push({ x: v.x * p.r + p.x, y: v.y * p.r + p.y, z: v.z * p.r + p.z });
+      ns.push(v);
+      cs.push(p.c[0], p.c[1], p.c[2], 1);
     }
-    for (const f of t.faces) g.faces.push([f[0] + base, f[1] + base, f[2] + base]);
-  });
+    for (const f of t.faces) fs.push([f[0] + base, f[1] + base, f[2] + base]);
+  }
   return g;
+}
+
+// Dibuja una malla de esferas. No usa model() porque model(), la primera vez, arma líneas de
+// contorno para cada triángulo (cientos de miles) aunque no se dibujen: eso era lo que demoraba.
+function dibujarMalla(g) {
+  if (!_renderer.geometryInHash(g.gid)) _renderer.createBuffers(g.gid, g);
+  _renderer.drawBuffers(g.gid);
 }
 
 // polilíneas en celdas de grilla ([x, h, z, x, h, z, ...]) → una geometría de líneas
@@ -97,7 +109,6 @@ function mallaLineas(polilineas) {
     }
     for (let k = 1; k < n; k++) g.edges.push([base + k - 1, base + k]);
   }
-  g._edgesToVertices();
   return g;
 }
 

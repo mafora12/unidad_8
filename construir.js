@@ -8,6 +8,7 @@ const DERIVA_ABAJO = 0.05;    // caen como sedimento
 const DERIVA_CENTRO = 0.006;  // y se acercan un poco al centro
 const RADIO_LLUVIA = 0.4;     // al evaporarse vuelven a caer cerca del centro (fracción del radio)
 const LOTE = 40;              // partículas pegadas que se hornean en una sola malla
+const FUSION = 8;             // lotes chicos que se funden en uno grande
 const RASTRO_LARGO = 6, RASTRO_CADA = 6;
 const CAPAS = [PALETA.deepRose, PALETA.dusty, PALETA.blush, PALETA.cherry];
 
@@ -117,11 +118,20 @@ class Construir {
   }
 
   hornear() {
-    this.lotes.push({
-      esferas: mallaEsferas(this.pendientes),
-      cauces: mallaLineas(this.pendientes.map(p => p.rastro)),
-    });
+    this.lotes.push(this.lote(this.pendientes, false));
     this.pendientes = [];
+
+    // cada FUSION lotes chicos se funden en uno grande: menos dibujos por frame
+    const chicos = this.lotes.filter(l => !l.grande);
+    if (chicos.length >= FUSION) {
+      for (const l of chicos) { freeGeometry(l.esferas); freeGeometry(l.cauces); }
+      this.lotes = this.lotes.filter(l => l.grande);
+      this.lotes.push(this.lote(chicos.flatMap(l => l.puntos), true));
+    }
+  }
+
+  lote(puntos, grande) {
+    return { puntos, grande, esferas: mallaEsferas(puntos), cauces: mallaLineas(puntos.map(p => p.rastro)) };
   }
 
   energia() {
@@ -140,7 +150,7 @@ class Construir {
     }
 
     fill(PALETA.pastel); // el término ambiental usa el fill: así tiñe de rosa y no de blanco
-    for (const l of this.lotes) model(l.esferas);
+    for (const l of this.lotes) dibujarMalla(l.esferas);
     for (const p of this.pendientes) {
       push(); translate(p.x, p.y, p.z); fill(p.c[0] * 255, p.c[1] * 255, p.c[2] * 255); sphere(p.r, 7, 5); pop();
     }
